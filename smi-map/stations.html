@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>SMI Stations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600&family=Arimo:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="stations.css">
+</head>
+<body>
+  <!-- Background stars; windows turn into stars when you zoom out -->
+  <canvas class="stars" id="stars" aria-hidden="true"></canvas>
+
+  <main class="galaxy" id="galaxy" aria-label="Student stations. Drag to explore, pinch or scroll to zoom.">
+    <div class="world" id="world"></div>
+  </main>
+
+  <!-- Search -->
+  <div class="search" role="search">
+    <label class="search-bar">
+      <span class="search-icon" aria-hidden="true">
+        <img src="assets/stations/search-1.svg" alt="" width="32" height="32" class="lens">
+        <img src="assets/stations/search-2.svg" alt="" width="13" height="14" class="handle">
+      </span>
+      <input id="search" type="search" placeholder="Look up your friends’ stations..." autocomplete="off" aria-label="Look up your friends’ stations">
+    </label>
+    <ul class="results" id="results" hidden></ul>
+  </div>
+
+  <!-- Home -->
+  <nav class="dock">
+    <button class="home" id="home" aria-label="Back to my station">
+      <img src="assets/stations/home-icon.svg" alt="" width="43" height="44">
+    </button>
+    <button class="zoom-btn map-btn" id="openTrack" aria-label="Campus track">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+        <path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        <path d="M9 4v13.5M15 6.5V20" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      </svg>
+    </button>
+  </nav>
+
+  <!-- Hover card -->
+  <div class="tip" id="tip" role="tooltip" hidden>
+    <strong class="tip-name"></strong>
+    <span class="tip-meta"></span>
+  </div>
+
+  <p class="toast" id="toast" role="status" aria-live="polite"></p>
+  <p class="loading" id="loading">Boarding…</p>
+
+  <!-- Campus race track (events) -->
+  <section class="track-view" id="trackView" hidden aria-labelledby="trackTitle">
+    <!-- The stage stays pinned while you scroll; scrolling only moves the fill and your character -->
+    <!-- Tap outside the card (or press Esc) to go back to the galaxy -->
+    <div class="track-stage" id="trackStage">
+      <h2 class="visually-hidden" id="trackTitle">Campus Track</h2>
+      <div class="track-fit" id="trackFit">
+        <div class="track-days" id="trackDays"></div>
+      </div>
+    </div>
+    <div class="track-spacer" id="trackSpacer" aria-hidden="true"></div>
+  </section>
+
+  <!-- Folder overlay -->
+  <dialog class="folder" id="folder">
+    <header class="folder-head">
+      <div class="mini-window"><img class="mini-frame" src="assets/stations/window-closed.png" alt=""><span class="mini-glass"><img alt=""></span></div>
+      <div class="folder-id">
+        <h2 id="folderName"></h2>
+        <p id="folderMeta"></p>
+      </div>
+      <button class="icon-btn" id="closeFolder" aria-label="Close">✕</button>
+    </header>
+
+    <!-- Only shown on my own station -->
+    <section class="mine" id="mineControls" hidden>
+      <div class="fields">
+        <label>Name <input id="myName" maxlength="30"></label>
+        <label>Year <input id="myYear" maxlength="20"></label>
+        <label>Major <input id="myMajor" maxlength="40"></label>
+      </div>
+      <div class="row">
+        <label class="pill-btn">Change cover
+          <input type="file" id="coverInput" accept="image/*" hidden>
+        </label>
+        <label class="pill-btn">+ Upload work
+          <input type="file" id="workInput" accept="image/*,video/mp4,video/webm" multiple hidden>
+        </label>
+        <button class="pill-btn toggle" id="privacy" aria-pressed="true"></button>
+        <button class="pill-btn quiet" id="logout">Log out</button>
+      </div>
+    </section>
+
+    <section class="works" id="works" aria-label="Work"></section>
+  </dialog>
+
+  <!-- Used by the "+" on empty windows -->
+  <input type="file" id="addCharInput" accept="image/*" hidden>
+
+  <template id="stationTpl">
+    <button class="station" type="button">
+      <!-- Open window underneath, closed window on top; tapping wipes the closed one away upward.
+           Both share the slot, and their reveal areas never overlap, so it is always one window. -->
+      <span class="win win-open" aria-hidden="true"><img class="frame-open" src="assets/stations/window.png" alt="" draggable="false"></span>
+      <!-- The character and "+" sit on the shutter, so they slide away with it and come back with it -->
+      <span class="win win-closed"><img class="frame" src="assets/stations/window-closed.png" alt="" draggable="false" aria-hidden="true"><span class="glass"><img class="cover" alt="" draggable="false"><span class="plus" aria-hidden="true"></span></span></span>
+      <span class="dot"></span>
+    </button>
+  </template>
+
+  <script type="module" src="stations.js"></script>
+</body>
+</html>

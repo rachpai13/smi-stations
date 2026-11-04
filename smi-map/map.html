@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SMI Map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Nunito:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .map-placeholder { flex: 1; display: grid; place-content: center; gap: 12px; text-align: center; font-family: var(--hand); }
+    .map-placeholder p { margin: 0; font-size: 22px; }
+    .map-placeholder small { font-size: 16px; opacity: .7; }
+    .logout {
+      justify-self: center; margin-top: 12px; padding: 8px 22px;
+      border: 2.5px solid var(--ink); border-radius: var(--radius-pill);
+      background: var(--paper); color: var(--ink); font: 20px var(--hand); cursor: pointer;
+    }
+    .logout:hover { background: var(--ink); color: var(--paper); }
+  </style>
+</head>
+<body>
+  <main class="building" aria-label="SMI Map">
+    <div class="roof" aria-hidden="true"></div>
+    <section class="wall">
+      <div class="map-placeholder">
+        <p id="hello">Opening the map…</p>
+        <small>The campus map arrives on Monday ✦</small>
+        <button class="logout" id="logout" hidden>Log out</button>
+      </div>
+    </section>
+    <div class="floor" aria-hidden="true"></div>
+  </main>
+
+  <script type="module">
+    import { supabase } from './supabase.js';
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) location.replace('login.html');
+    else {
+      document.getElementById('hello').textContent = `Hi ${session.user.email.split('@')[0]}, you're in!`;
+      const logout = document.getElementById('logout');
+      logout.hidden = false;
+      logout.addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        location.replace('login.html');
+      });
+    }
+  </script>
+</body>
+</html>

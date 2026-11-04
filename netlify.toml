@@ -1,0 +1,4 @@
+# Netlify: the site is plain HTML/CSS/JS in smi-map/, so there is nothing to build.
+[build]
+  publish = "smi-map"
+  command = ""

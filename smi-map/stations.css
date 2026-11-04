@@ -1,0 +1,507 @@
+:root {
+  --bg: #191919;
+  --chrome: rgba(255, 255, 255, 0.1);
+  --muted: #979aa1;
+  --text: #f2f2f2;
+  --accent: #8fb4ff;
+  /* 1 design px: the Figma frame is 888 wide; phone-sized chrome caps at 480px wide */
+  --k: calc(min(100vw, 480px) / 888);
+  --pixel: "Pixelify Sans", system-ui, sans-serif;
+  /* Glass opening inside the 322px window art (measured from window.png) */
+  --glass-x: 81px; --glass-y: 48px; --glass-w: 164px; --glass-h: 222px;   /* shutter area of window-closed.png */
+  --glass-radius: 50% / 38%;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--pixel);
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- Galaxy ---------- */
+.stars { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+.galaxy {
+  position: fixed; inset: 0;
+  touch-action: none;
+  cursor: grab;
+}
+.galaxy.is-dragging { cursor: grabbing; }
+
+.world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+
+.station {
+  position: absolute;
+  width: 322px; height: 322px;
+  padding: 0; border: 0; background: none;
+  cursor: pointer;
+  opacity: 0.6;                       /* dimmed, as in the design */
+  transition: opacity .25s ease, transform .25s ease;
+}
+.station.lit { opacity: 1; }
+.station:focus-visible { outline: 6px dashed var(--accent); outline-offset: -20px; border-radius: 40%; }
+.station:hover.lit { transform: scale(1.03); }
+
+
+/* window-closed.png is 204×267 here, centred in the 322px slot */
+.station .frame { position: absolute; left: 59px; top: 27.5px; width: 204px; height: 267px; pointer-events: none; user-select: none; }
+
+/* Open window (window.png), scaled so its frame sits exactly on the closed frame:
+   frame bounds 406×517 in the 612px art → 202.5×262.5 at (60.5, 29) in the slot. */
+.station .frame-open { position: absolute; left: 9.1px; top: 2.1px; width: 305.3px; height: 310.7px; pointer-events: none; user-select: none; }
+
+/* Both windows share the slot. Opening wipes the closed one away from the bottom up while the open one
+   is revealed in exactly the strip below; the two areas never overlap, so it is always one window. */
+.win { position: absolute; inset: 0; pointer-events: none; transition: clip-path .6s cubic-bezier(.6, 0, .2, 1); }
+.win-closed { clip-path: inset(0 0 0 0); }
+.win-open { clip-path: inset(100% 0 0 0); }
+.station.open .win-closed { clip-path: inset(0 0 100% 0); }
+.station.open .win-open { clip-path: inset(0 0 0 0); }
+
+/* The window art is window-closed.png (your closed window). This box places the character and the "+" on its shutter. */
+.glass {
+  position: absolute;
+  left: var(--glass-x); top: var(--glass-y); width: var(--glass-w); height: var(--glass-h);
+  border-radius: var(--glass-radius);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* "+" on empty windows: tap to add your character */
+.plus {
+  position: absolute; left: 50%; top: 44%;
+  width: 34px; height: 34px; margin: -17px 0 0 -17px;
+  display: none;
+}
+.plus::before, .plus::after {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  background: #6f727a; border-radius: 3px;
+  transition: background-color .15s;
+}
+.plus::before { width: 30px; height: 5px; margin: -2.5px 0 0 -15px; }
+.plus::after  { width: 5px; height: 30px; margin: -15px 0 0 -2.5px; }
+.station.addable .plus { display: block; }
+/* With a mouse, the "+" only appears when you hover an empty window (phones always show it) */
+@media (hover: hover) {
+  .station.addable .plus { display: none; }
+  .station.addable:hover .plus, .station.addable:focus-visible .plus { display: block; }
+}
+.station.addable:hover .plus::before, .station.addable:hover .plus::after { background: #3f4249; }
+
+/* Character stands in the window */
+.cover {
+  position: absolute; left: 21%; bottom: 16%;
+  width: 58%; height: 62%;
+  object-fit: contain; object-position: center bottom;
+  image-rendering: pixelated;
+  display: none;
+}
+.cover[src] { display: block; }
+
+/* Zoomed out: windows become stars */
+.dot {
+  position: absolute; left: 50%; top: 50%;
+  width: calc(10px * var(--inv, 1)); height: calc(10px * var(--inv, 1));
+  margin: calc(-5px * var(--inv, 1)) 0 0 calc(-5px * var(--inv, 1));
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 calc(8px * var(--inv, 1)) rgba(255,255,255,.6);
+  opacity: 0; transform: scale(.4);
+  transition: opacity .3s, transform .3s;
+  pointer-events: none;
+}
+.station.me .dot { background: var(--accent); box-shadow: 0 0 calc(12px * var(--inv, 1)) var(--accent); }
+.station.lit .dot { transform: scale(1.5); }
+
+.world.far .station .win,
+.world.far .station .glass { opacity: 0; transition: opacity .3s; }
+.world.far .station .dot { opacity: 1; transform: scale(1); }
+.world.far .station.lit .dot { transform: scale(1.8); }
+.world .station .win { transition: opacity .3s, clip-path .6s cubic-bezier(.6, 0, .2, 1); }
+.world .station .glass { transition: opacity .3s; }
+
+/* ---------- Search ---------- */
+.search {
+  position: fixed; z-index: 5;
+  left: 50%; transform: translateX(-50%);
+  top: calc(44 * var(--k) + env(safe-area-inset-top));
+  width: calc(804 * var(--k));
+}
+.search-bar {
+  display: flex; align-items: center;
+  height: calc(110 * var(--k));
+  padding-left: calc(43 * var(--k));
+  border-radius: calc(100 * var(--k));
+  background: var(--chrome);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  cursor: text;
+}
+.search-icon { position: relative; flex: none; width: calc(43 * var(--k)); height: calc(41 * var(--k)); }
+.search-icon .lens { position: absolute; left: 0; top: 0; width: calc(32.4 * var(--k)); height: auto; }
+.search-icon .handle { position: absolute; left: calc(25.7 * var(--k)); top: calc(24.9 * var(--k)); width: calc(13.3 * var(--k)); height: auto; }
+.search-bar input {
+  flex: 1; min-width: 0; height: 100%;
+  margin-left: calc(33 * var(--k));
+  border: 0; outline: 0; background: transparent;
+  font: 500 calc(32 * var(--k)) / 1 var(--pixel);
+  color: var(--text);
+}
+.search-bar input::placeholder { color: var(--muted); }
+.search-bar input::-webkit-search-cancel-button { filter: invert(1); }
+
+.results {
+  list-style: none; margin: 8px 0 0; padding: 6px;
+  border-radius: 22px; background: rgba(40,40,40,.92);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.results button {
+  display: flex; justify-content: space-between; gap: 10px; width: 100%;
+  padding: 10px 14px; border: 0; border-radius: 16px; background: none;
+  color: var(--text); font: 500 15px var(--pixel); text-align: left; cursor: pointer;
+}
+.results button:hover, .results button:focus-visible { background: var(--chrome); outline: 0; }
+.results small { color: var(--muted); font-size: 13px; }
+.results .none { padding: 10px 14px; color: var(--muted); font-size: 14px; }
+
+/* ---------- Dock ---------- */
+.dock {
+  position: fixed; z-index: 10; /* above the track screen too */
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(64 * var(--k) + env(safe-area-inset-bottom));
+  width: calc(502 * var(--k));
+  padding: calc(13 * var(--k)) calc(166 * var(--k));
+  border-radius: calc(355 * var(--k));
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.28), rgba(255,255,255,.06) 35%, rgba(255,255,255,.06) 65%, rgba(255,255,255,.28)),
+    var(--chrome);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.home {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%;
+  padding: calc(30 * var(--k));
+  border: 0; border-radius: calc(100 * var(--k));
+  background: var(--bg);
+  cursor: pointer;
+}
+.home img { width: calc(43 * var(--k)); height: auto; display: block; }
+
+/* − and + sit in the empty ends of the dock (tap-friendly zoom, e.g. on phones) */
+.zoom-btn {
+  position: absolute; top: 50%;
+  width: calc(84 * var(--k)); height: calc(84 * var(--k));
+  margin-top: calc(-42 * var(--k));
+  display: grid; place-items: center; padding: 0;
+  border: 0; border-radius: 50%;
+  background: var(--bg); color: #fff;
+  font: 500 calc(52 * var(--k)) / 1 var(--pixel);
+  cursor: pointer;
+}
+.map-btn { right: calc(41 * var(--k)); }
+.map-btn svg { width: calc(44 * var(--k)); height: calc(44 * var(--k)); }
+.zoom-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.loading {
+  position: fixed; inset: 0; z-index: 8; margin: 0;
+  display: grid; place-items: center;
+  background: var(--bg); color: var(--muted); font-size: 22px;
+}
+.loading[hidden] { display: none; }
+
+/* ---------- Campus Track (Figma node 1715:6795) ---------- */
+/* The view scrolls over a tall spacer, but the stage is pinned: only the fill and the glass tile move. */
+.track-view {
+  position: fixed; inset: 0; z-index: 9;
+  overflow-y: auto; overscroll-behavior: contain;
+  background: #191919;
+}
+.track-view[hidden] { display: none; }
+.track-stage {
+  position: sticky; top: 0;
+  height: 100vh; height: 100dvh;
+  overflow: hidden;
+}
+.track-spacer { height: 0; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Card: 20px padding on every side. Track: 30px inside its ends above the first box and below the logo.
+   The track is wider than the Figma frame to fit a running lane for your character on its left. */
+.track-fit {
+  position: absolute; left: 50%; top: 50%;
+  width: 780px; height: 624px;
+  transform: translate(-50%, -50%) scale(var(--fit, 1));
+}
+.track-days { position: relative; width: 780px; height: 624px; }
+
+/* One day per card; when the current track is full the next day replaces it */
+.day { position: absolute; inset: 0; display: none; }
+.day.current { display: block; }
+
+.tcard {
+  position: absolute; inset: 0;
+  background: #1c1c1c;
+  border-radius: 16px;
+  font-family: Arimo, system-ui, sans-serif;
+}
+
+/* The track: three columns joined at the bottom and top. In each column, --x is the column's left
+   edge; the lane (x 8–48) is for characters and the number boxes sit right of it. */
+.pill { position: absolute; inset: 0; }
+.line { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.line path { fill: none; stroke-linejoin: miter; stroke-linecap: round; }
+.rail { stroke: rgba(255,255,255,.12); stroke-width: 6; }
+.fill { stroke: #fff; stroke-width: 8; filter: drop-shadow(0 0 7px rgba(255,255,255,.2)); }
+
+/* Number tiles: dark (node 1715:6718) until the white line reaches them, then glass (node 1715:6723) */
+.marker {
+  position: absolute; left: calc(var(--x) + 56px); z-index: 1;
+  width: 34px; height: 34px; padding: 0;
+  display: grid; place-items: center;
+  border-radius: 10px; border: .8px solid rgba(255,255,255,.1);
+  background: #1c1c1e;
+  filter: drop-shadow(0 5px 8px rgba(0,0,0,.45));
+  color: #8e8e93; font: 700 15px/22.5px Arimo, system-ui, sans-serif;
+  cursor: pointer;
+  transition: background-color .2s ease, color .2s ease, box-shadow .2s ease;
+}
+.marker:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.marker .n { position: relative; z-index: 2; }
+
+/* Glass box: Figma's own render of node 1715:6723 (Glass effect: frost 4, refraction 80, depth 20,
+   dispersion 50, light −45° at 80%), exported without its number. The image is the 60×75 render area
+   (box + shadows) at 4×; the box sits 10.4px in and 18px down inside it. */
+.marker .glass-img {
+  position: absolute; z-index: 1;
+  left: -10.4px; top: -18px; width: 60px; height: 75px;
+  background: url("assets/stations/glass-tile.png") center / 60px 75px no-repeat;
+  opacity: 0; transition: opacity .2s ease;
+  pointer-events: none;
+}
+.marker.glass {
+  left: calc(var(--x) + 57px);
+  background: transparent; border-color: transparent;
+  filter: none;
+  color: #000;
+}
+.marker.glass .glass-img { opacity: 1; }
+
+/* Figma logo at the end of the track, centred under the boxes */
+.flogo {
+  position: absolute; left: calc(var(--x) + 62px); top: 541px;
+  display: grid; grid-template-columns: 11px 11px; grid-template-rows: 11px 11px 11px;
+  filter: drop-shadow(0 0 8px rgba(255,255,255,.18));
+}
+.flogo i { display: block; }
+.flogo .a { background: #f24e1e; border-top-left-radius: 6px; }
+.flogo .b { background: #ff7262; border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
+.flogo .c { background: #a259ff; border-bottom-left-radius: 6px; }
+.flogo .d { background: #1abcfe; border-radius: 5.5px; }
+.flogo .e { background: #0acf83; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
+
+/* Your character running in the lane, level with the front of the white line */
+.runner {
+  position: absolute; left: 0; top: 0; z-index: 3;
+  width: 30px; height: 40px; margin-top: -40px;
+  pointer-events: none; will-change: transform;
+}
+.runner[hidden] { display: none; }
+.runner .body { display: block; width: 100%; height: 100%; transform-origin: 50% 100%; }
+.runner.moving .body { animation: walk var(--step, .5s) steps(2, jump-none) infinite; }
+.runner.running .body { animation-name: run; }
+@keyframes walk {
+  0%, 100% { transform: translateY(0) rotate(-5deg); }
+  50% { transform: translateY(-3px) rotate(5deg); }
+}
+@keyframes run {
+  0%, 100% { transform: translateY(0) rotate(4deg) scaleY(.96); }
+  50% { transform: translateY(-6px) rotate(12deg) scaleY(1.03); }
+}
+
+/* Characters parked in the lane beside a number */
+.parked {
+  position: absolute; left: calc(var(--x) + 6px); z-index: 2;
+  width: 44px; height: 40px;
+  display: flex; flex-direction: row-reverse; justify-content: flex-start; align-items: flex-end;
+}
+.parked .avatar + .avatar { margin-right: -16px; }
+.parked .more {
+  position: absolute; left: 0; bottom: -10px;
+  font: 700 10px Arimo, system-ui, sans-serif; color: #a1a1a6;
+}
+
+.avatar {
+  position: relative; flex: none;
+  width: 30px; height: 40px;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.avatar img { flex: none; width: 30px; height: 40px; object-fit: contain; object-position: center bottom; image-rendering: pixelated; filter: drop-shadow(0 2px 2px rgba(0,0,0,.6)); }
+.avatar .initial {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: #3a3a3c; border: 1.5px solid #f5f5f7; color: #f5f5f7;
+  font: 700 11px Arimo, system-ui, sans-serif;
+}
+.avatar.mine .initial { background: #f5f5f7; color: #000; }
+
+/* Name on hover (desktop) or tap (phone) */
+.parked .avatar { cursor: pointer; }
+.parked .avatar::after {
+  content: attr(data-name);
+  position: absolute; left: 0; bottom: calc(100% + 4px); z-index: 5;
+  padding: 3px 7px; border-radius: 6px;
+  background: #f5f5f7; color: #000;
+  font: 700 11px Arimo, system-ui, sans-serif; white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity .15s;
+}
+.parked .avatar:hover::after, .parked .avatar:focus-visible::after, .parked .avatar.show-name::after { opacity: 1; }
+.parked .avatar:hover, .parked .avatar:focus-visible { z-index: 6; }
+.parked .avatar:focus-visible { outline: 2px solid #fff; outline-offset: 1px; border-radius: 4px; }
+
+/* Labels beside each box; they fade with distance from the glass box */
+.labels { position: absolute; inset: 0; margin: 0; padding: 0; list-style: none; pointer-events: none; }
+.tl {
+  position: absolute; left: calc(var(--x) + 120px); width: 120px;
+  height: 60px; overflow: hidden;
+  display: flex; flex-direction: column; align-items: flex-start;
+  margin: 0;
+  transition: opacity .2s ease;
+}
+.tl .time { font: 700 14px/16.1px Arimo, system-ui, sans-serif; color: #f5f5f7; white-space: nowrap; }
+.tl .title { padding-top: 3px; font: 400 14px/14.7px Arimo, system-ui, sans-serif; color: #a1a1a6; }
+.tl.active .title { color: #f5f5f7; }
+
+@media (prefers-reduced-motion: reduce) {
+  .marker, .tl { transition: none; }
+  .runner.moving .body { animation: none; }
+}
+
+.home:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* ---------- Hover card ---------- */
+.tip {
+  position: fixed; z-index: 6;
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 150px; max-width: 240px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(30,30,30,.94);
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 10px 30px rgba(0,0,0,.45);
+  transform: translate(-50%, calc(-100% - 10px));
+  pointer-events: none;
+}
+.tip[hidden] { display: none; }
+.tip-name { font-size: 17px; font-weight: 600; }
+.tip-meta { font-size: 13px; color: var(--muted); line-height: 1.35; white-space: pre-line; }
+
+.toast {
+  position: fixed; z-index: 7; left: 50%; bottom: calc(220 * var(--k) + 10px);
+  transform: translate(-50%, 10px);
+  margin: 0; padding: 10px 16px; border-radius: 999px;
+  background: rgba(30,30,30,.95); border: 1px solid rgba(255,255,255,.14);
+  font-size: 15px; white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------- Folder overlay ---------- */
+.folder {
+  width: min(720px, calc(100% - 24px));
+  max-height: calc(100dvh - 40px);
+  padding: 0;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 28px;
+  background: #222;
+  color: var(--text);
+  overflow: auto;
+}
+.folder::backdrop { background: rgba(0,0,0,.6); backdrop-filter: blur(4px); }
+.folder[open] { animation: rise .3s cubic-bezier(.2,.8,.2,1); }
+@keyframes rise { from { transform: translateY(24px) scale(.97); opacity: 0; } }
+
+.folder-head {
+  position: sticky; top: 0; z-index: 1;
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 18px 14px;
+  background: #222;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.mini-window { position: relative; flex: none; width: 74px; height: 74px; }
+.mini-window .mini-frame { position: absolute; left: calc(74px * 59 / 322); top: calc(74px * 27.5 / 322); width: calc(74px * 204 / 322); height: calc(74px * 267 / 322); display: block; }
+.mini-glass {
+  position: absolute;
+  left: calc(74px * 81 / 322); top: calc(74px * 48 / 322);
+  width: calc(74px * 164 / 322); height: calc(74px * 222 / 322);
+  border-radius: var(--glass-radius); overflow: hidden;
+}
+.mini-glass img { width: 80%; height: 84%; margin: 8% 10%; object-fit: contain; object-position: bottom; image-rendering: pixelated; display: none; }
+.mini-glass img[src] { display: block; }
+.folder-id { flex: 1; min-width: 0; }
+.folder-id h2 { margin: 0; font-size: 26px; font-weight: 600; }
+.folder-id p { margin: 2px 0 0; color: var(--muted); font-size: 15px; }
+
+.icon-btn {
+  flex: none; width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.2); background: var(--chrome);
+  color: var(--text); font-size: 16px; cursor: pointer;
+}
+
+.icon-btn:focus { outline: 0; }
+.icon-btn:focus-visible, .pill-btn:focus-visible, .pill-btn:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.mine { padding: 14px 18px 0; }
+.fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.fields label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.fields input {
+  height: 38px; padding: 0 12px; border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.14); background: #1a1a1a;
+  color: var(--text); font: 500 15px var(--pixel); outline: 0;
+}
+.fields input:focus { border-color: var(--accent); }
+.row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.pill-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 40px; padding: 0 16px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.2); background: var(--chrome);
+  color: var(--text); font: 500 15px var(--pixel); cursor: pointer;
+}
+.pill-btn:hover { background: rgba(255,255,255,.16); }
+.toggle[aria-pressed="false"] { background: #3a3a3a; color: var(--muted); }
+.pill-btn.quiet { background: none; color: var(--muted); }
+.pill-btn[aria-busy="true"] { opacity: .6; pointer-events: none; }
+
+.works {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  padding: 16px 18px 20px;
+}
+.work {
+  position: relative; margin: 0;
+  border-radius: 16px; overflow: hidden;
+  background: #1a1a1a; border: 1px solid rgba(255,255,255,.08);
+}
+.work .art { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; }
+.work .fake {
+  display: grid; place-items: end start; padding: 12px;
+  aspect-ratio: 4 / 5;
+  font-size: 18px; font-weight: 600; line-height: 1.1; color: rgba(255,255,255,.95);
+  text-shadow: 0 1px 2px rgba(0,0,0,.3);
+}
+.work figcaption { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 8px 10px; font-size: 13px; color: var(--muted); }
+.work .remove { border: 0; background: none; color: #ff8080; font: 500 13px var(--pixel); cursor: pointer; padding: 0; }
+.works .empty { grid-column: 1 / -1; text-align: center; color: var(--muted); padding: 30px 0; font-size: 16px; }
+
+@media (max-width: 520px) {
+  .fields { grid-template-columns: 1fr; }
+  .works { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station, .dot, .win, .folder[open] { transition: none; animation: none; }
+}

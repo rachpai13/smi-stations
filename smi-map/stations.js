@@ -78,6 +78,10 @@ async function loadStations() {
   rows = data;
   const urls = await signedUrls(rows.map(r => r.cover_path));
   for (const r of rows) r.coverUrl = r.cover_path ? urls[r.cover_path] : null;
+  // Which windows have work in them: their folder shows the document, the rest stay empty glass
+  const { data: works } = await supabase.from('station_works').select('station_id');
+  const withWork = new Set((works ?? []).map(w => w.station_id));
+  for (const r of rows) r.hasWork = withWork.has(r.id);
 }
 
 /* ---------------- Build the galaxy ---------------- */
@@ -121,6 +125,9 @@ function build() {
     // A "+" sits on empty windows (until you've boarded), and on yours until you've added your character.
     const addable = (!row && !boarded) || (isMe && !row.coverUrl);
     seat.el.classList.toggle('addable', addable);
+    const folderIcon = seat.el.querySelector('.win-folder img');
+    const icon = `assets/stations/${row?.hasWork ? 'folder' : 'folder-empty'}.png`;
+    if (folderIcon.getAttribute('src') !== icon) folderIcon.setAttribute('src', icon);
     const cover = seat.el.querySelector('.cover');
     if (row?.coverUrl) cover.src = row.coverUrl; else cover.removeAttribute('src');
     seat.el.setAttribute('aria-label', !row ? 'Empty window: add your character here'
@@ -742,7 +749,15 @@ document.getElementById('workInput').addEventListener('change', async (e) => {
   label.removeAttribute('aria-busy');
   if (added) { say(`Uploaded ${added} piece${added === 1 ? '' : 's'}.`); announce(); }
   await loadWorks();
+  showWorkInFolder();
 });
+
+// Your window's folder shows the document once you've uploaded something, and empties if you remove it all.
+function showWorkInFolder() {
+  if (!me()) return;
+  me().hasWork = works.length > 0;
+  build();
+}
 
 async function removeWork(w) {
   if (!confirm(`Remove "${w.title}"?`)) return;
@@ -751,6 +766,7 @@ async function removeWork(w) {
   await supabase.storage.from(BUCKET).remove([w.path]);
   announce();
   await loadWorks();
+  showWorkInFolder();
 }
 
 // No login step, so there's nothing to log out of.

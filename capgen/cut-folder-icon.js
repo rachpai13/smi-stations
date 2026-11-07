@@ -1,9 +1,9 @@
 // Lifts the glowing folder icon off its dark navy background (light-on-dark extraction):
 // each pixel = bg × (1 − a) + colour × a, with a taken from how far the pixel rises above the background.
 // The dark background becomes transparent; the glow and frosted panel keep partial transparency.
-// Usage: node cut-folder-icon.js <in.png> <out.png> <size>
+// Usage: node cut-folder-icon.js <in.png> <out.png> <size> [x0,y0,w,h]   (fixed crop, to match another icon)
 const { readImage, writePng } = require('./pixels');
-const [inFile, outFile, sizeArg] = process.argv.slice(2);
+const [inFile, outFile, sizeArg, cropArg] = process.argv.slice(2);
 const S = Number(sizeArg);
 const { px } = readImage(inFile, S, S);
 
@@ -29,7 +29,8 @@ for (let p = 0; p < S * S; p++) {
 }
 // Crop to the visible icon (plus its glow) with a little room
 const pad = 6;
-const x0 = Math.max(0, minX - pad), y0 = Math.max(0, minY - pad), x1 = Math.min(S - 1, maxX + pad), y1 = Math.min(S - 1, maxY + pad);
+let x0 = Math.max(0, minX - pad), y0 = Math.max(0, minY - pad), x1 = Math.min(S - 1, maxX + pad), y1 = Math.min(S - 1, maxY + pad);
+if (cropArg) { const [cx, cy, cw0, ch0] = cropArg.split(',').map(Number); x0 = cx; y0 = cy; x1 = cx + cw0 - 1; y1 = cy + ch0 - 1; }
 const cw = x1 - x0 + 1, ch = y1 - y0 + 1, crop = Buffer.alloc(cw * ch * 4);
 for (let y = 0; y < ch; y++) out.copy(crop, y * cw * 4, ((y + y0) * S + x0) * 4, ((y + y0) * S + x1 + 1) * 4);
 writePng(outFile, { w: cw, h: ch, px: crop });

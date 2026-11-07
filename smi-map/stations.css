@@ -265,7 +265,8 @@ body {
   font: 700 11px/16px Arimo, system-ui, sans-serif; color: #8e8e93;
   padding: 0 8px; border-radius: 999px; background: rgba(255,255,255,.06);
 }
-.marker.inactive, .tl.inactive, .flogo.inactive { opacity: .3; pointer-events: none; cursor: default; }
+.marker.inactive { pointer-events: none; cursor: default; } /* same look as unreached stops, just not tappable */
+.tl.inactive, .flogo.inactive { opacity: .3; pointer-events: none; cursor: default; }
 .tl.inactive { opacity: .16; } /* dimmer than Event 1's faded labels, so the open event stands out */
 .parked.inactive { display: none; }
 

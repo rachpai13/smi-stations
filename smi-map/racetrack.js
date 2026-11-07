@@ -291,8 +291,10 @@ function onScroll() {
 
 function renderParks() {
   const byStop = new Map();
+  // Spots in events that aren't open (or from an older track layout) don't count: those people run instead.
+  const counts = (key) => stops.has(key) && Number(key.split('-')[0]) < ACTIVE;
   for (const [id, key] of parks) {
-    if (!stops.has(key)) continue;
+    if (!counts(key)) continue;
     if (!byStop.has(key)) byStop.set(key, []);
     byStop.get(key).push(id);
   }
@@ -313,7 +315,7 @@ function renderParks() {
     }));
     if (ids.length > 3) stop.parked.append(make('span', 'more', `+${ids.length - 3}`));
   }
-  const parked = parks.has(ctx.uid);
+  const parked = counts(parks.get(ctx.uid) ?? '');
   boards.forEach(b => { b.runner.hidden = parked; });
 }
 

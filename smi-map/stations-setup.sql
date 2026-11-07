@@ -61,7 +61,7 @@ create policy "stations files: read" on storage.objects for select to authentica
   bucket_id = 'stations' and (
     (storage.foldername(name))[1] = 'covers'
     or (storage.foldername(name))[2] = auth.uid()::text
-    or exists (select 1 from public.stations s where s.id::text = (storage.foldername(name))[2] and s.is_open)
+    or exists (select 1 from public.stations s where s.id::text = (storage.foldername(objects.name))[2] and s.is_open)
   )
 );
 drop policy if exists "stations files: upload mine" on storage.objects;

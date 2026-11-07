@@ -255,9 +255,19 @@ body {
 /* One box per event, with "Event N" on top */
 .ebox { position: absolute; background: #1c1c1c; border-radius: 16px; }
 .ebox-title {
-  position: absolute; left: 20px; top: 22px; margin: 0;
+  position: absolute; left: 20px; top: 20px; margin: 0;
   font: 700 16px/20px Arimo, system-ui, sans-serif; color: #f5f5f7; letter-spacing: .02em;
 }
+/* Events that aren't open yet: dimmed, not tappable */
+.ebox.inactive .ebox-title { color: #6e6e73; }
+.ebox-soon {
+  position: absolute; right: 20px; top: 22px;
+  font: 700 11px/16px Arimo, system-ui, sans-serif; color: #8e8e93;
+  padding: 0 8px; border-radius: 999px; background: rgba(255,255,255,.06);
+}
+.marker.inactive, .tl.inactive, .flogo.inactive { opacity: .3; pointer-events: none; cursor: default; }
+.tl.inactive { opacity: .16; } /* dimmer than Event 1's faded labels, so the open event stands out */
+.parked.inactive { display: none; }
 
 /* Each box's straight track: --x is its column's left edge; the lane (x 8–48) is for characters
    and the number boxes sit right of it. */
@@ -302,16 +312,16 @@ body {
 
 /* Figma logo at the end of the track, centred under the boxes */
 .flogo {
-  position: absolute; left: calc(var(--x) + 62px); top: 541px;
-  display: grid; grid-template-columns: 11px 11px; grid-template-rows: 11px 11px 11px;
+  position: absolute; left: calc(var(--x) + 65px); top: 541px;
+  display: grid; grid-template-columns: 8px 8px; grid-template-rows: 8px 8px 8px;
   filter: drop-shadow(0 0 8px rgba(255,255,255,.18));
 }
 .flogo i { display: block; }
-.flogo .a { background: #f24e1e; border-top-left-radius: 6px; }
-.flogo .b { background: #ff7262; border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
-.flogo .c { background: #a259ff; border-bottom-left-radius: 6px; }
-.flogo .d { background: #1abcfe; border-radius: 5.5px; }
-.flogo .e { background: #0acf83; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
+.flogo .a { background: #f24e1e; border-top-left-radius: 4.5px; }
+.flogo .b { background: #ff7262; border-top-right-radius: 4.5px; border-bottom-right-radius: 4.5px; }
+.flogo .c { background: #a259ff; border-bottom-left-radius: 4.5px; }
+.flogo .d { background: #1abcfe; border-radius: 4px; }
+.flogo .e { background: #0acf83; border-bottom-left-radius: 4.5px; border-bottom-right-radius: 4.5px; }
 
 /* Your character running in the lane, level with the front of the white line */
 .runner {

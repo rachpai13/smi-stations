@@ -63,13 +63,16 @@ const DAYS = [
 
 // Geometry in pixels (matches stations.css). Each event is a box with one straight track of 8 stops.
 // Wide screens put the four boxes in a row; tall ones (phones) in a 2×2 grid.
-const BOX_W = 256, BOX_H = 600, GAP = 16;
-const ORIGIN = 6;                // track column's left edge inside its box (lane, numbers, labels follow)
-const FIRST_TOP = 72;            // first number box's top, below the "Event N" title
+const PAD = 20;                  // equal padding inside each box, all four sides
+const ORIGIN = PAD - 6;          // track column's left edge (the parking lane starts 6px in)
+const BOX_W = ORIGIN + 240 + PAD, GAP = 16; // lane + numbers + labels (240px) + right padding
+const FIRST_TOP = 64;            // first number box's top, below the "Event N" title
 const STEP = 60;                 // number box spacing
 const ROWS = 8;
 const LINE_X = 73;               // line centre, from the column's left edge
-const LOGO_TOP = FIRST_TOP + (ROWS - 1) * STEP + 34 + 40; // Figma logo under the last stop
+const LOGO_H = 24;               // Figma logo (16×24) under the last stop
+const LOGO_TOP = FIRST_TOP + (ROWS - 1) * STEP + 34 + 28;
+const BOX_H = LOGO_TOP + LOGO_H + PAD;
 const SEG = (ROWS - 1) * STEP;    // length of one box's track
 let COLS = 4, CARD_W = 0, CARD_H = 0;
 const boxX = (c) => (c % COLS) * (BOX_W + GAP);
@@ -77,11 +80,12 @@ const boxY = (c) => Math.floor(c / COLS) * (BOX_H + GAP);
 const colX = (c) => boxX(c) + ORIGIN;
 const rowY = (c, i) => boxY(c) + FIRST_TOP + i * STEP;
 const centre = (c, i) => rowY(c, i) + 17;
-const TOTAL = SEG * DAYS.length;
+const ACTIVE = 1;                // events open so far; the rest show dimmed as "Coming soon"
+const TOTAL = SEG * ACTIVE;
 // Distance along the tracks to each stop (box 1's track, then box 2's, …)
-const BOX_D = DAYS.flatMap((_, c) => Array.from({ length: ROWS }, (__, i) => c * SEG + i * STEP));
+const BOX_D = DAYS.slice(0, ACTIVE).flatMap((_, c) => Array.from({ length: ROWS }, (__, i) => c * SEG + i * STEP));
 function pointAt(d) {
-  const c = Math.min(DAYS.length - 1, Math.floor(d / SEG));
+  const c = Math.min(ACTIVE - 1, Math.floor(d / SEG));
   const along = Math.min(SEG, d - c * SEG);
   return [colX(c) + LINE_X, centre(c, 0) + along];
 }
@@ -153,6 +157,7 @@ function build() {
     box.style.left = `${boxX(d)}px`; box.style.top = `${boxY(d)}px`;
     box.style.width = `${BOX_W}px`; box.style.height = `${BOX_H}px`;
     box.append(make('h3', 'ebox-title', `Event ${d + 1}`));
+    if (d >= ACTIVE) { box.classList.add('inactive'); box.append(make('span', 'ebox-soon', 'Coming soon')); }
     tcard.append(box);
   });
 
@@ -182,7 +187,9 @@ function build() {
       const key = `${d}-${i}`;
       const top = rowY(d, i);
 
-      const marker = make('button', 'marker');
+      const off = d >= ACTIVE; // not open yet: dimmed and can't be tapped
+      const marker = make('button', `marker${off ? ' inactive' : ''}`);
+      if (off) { marker.disabled = true; marker.tabIndex = -1; }
       marker.type = 'button';
       marker.style.setProperty('--x', `${colX(d)}px`);
       marker.style.top = `${top}px`;
@@ -192,13 +199,13 @@ function build() {
       pill.append(marker);
       markers.push(marker);
 
-      const parked = make('span', 'parked');
+      const parked = make('span', `parked${off ? ' inactive' : ''}`);
       parked.style.setProperty('--x', `${colX(d)}px`);
       parked.style.top = `${top - 4}px`;
       pill.append(parked);
       stops.set(key, { marker, parked });
 
-      const tl = make('li', 'tl');
+      const tl = make('li', `tl${off ? ' inactive' : ''}`);
       tl.style.setProperty('--x', `${colX(d)}px`);
       tl.style.top = `${top + 2}px`;
       tl.append(make('span', 'time', ev.time), make('span', 'title', ev.title));
@@ -207,7 +214,7 @@ function build() {
     });
 
     // Figma logo at the bottom of this event's track
-    const logo = make('div', 'flogo');
+    const logo = make('div', `flogo${d >= ACTIVE ? ' inactive' : ''}`);
     logo.setAttribute('aria-hidden', 'true');
     logo.style.setProperty('--x', `${colX(d)}px`);
     logo.style.top = `${boxY(d) + LOGO_TOP}px`;
@@ -231,7 +238,7 @@ function build() {
 /* ---------------- Scroll: grow the line; boxes turn to glass as it reaches them ---------------- */
 
 function sizeStage() {
-  spacer.style.height = `${DAYS.length * innerHeight * 1.3}px`;
+  spacer.style.height = `${ACTIVE * innerHeight * 1.6}px`;
   // The navbar stays on screen: keep the (centred) card clear of it, top and bottom alike.
   const dock = document.querySelector('.dock')?.getBoundingClientRect();
   const dockSpace = dock ? innerHeight - dock.top + 12 : 24;
@@ -257,6 +264,7 @@ function update() {
   BOX_D.forEach((bd, j) => { if (bd <= d + 1) reached = j; });
   b.markers.forEach((m, j) => m.classList.toggle('glass', j === reached));
   b.labels.forEach((tl, j) => {
+    if (j >= ACTIVE * ROWS) return; // events not open yet keep their dimmed look
     const sameBox = Math.floor(j / ROWS) === Math.floor(reached / ROWS); // labels fade only within the current event
     tl.style.opacity = sameBox ? Math.max(0.18, 1 - 0.2 * Math.abs(j - reached)).toFixed(2) : '0.18';
     tl.classList.toggle('active', j === reached);

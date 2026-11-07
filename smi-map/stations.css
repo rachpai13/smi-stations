@@ -67,6 +67,22 @@ body {
 .win-folder img { display: block; width: 100%; height: 100%; user-select: none; }
 .station.open .win-folder { pointer-events: auto; }
 .station.open .win-folder:hover { transform: scale(1.06); filter: brightness(1.12); }
+/* The folder only appears once someone has uploaded work; before that, your own window shows a "+" */
+.station:not(.has-work) .win-folder { display: none; }
+.win-add {
+  position: absolute; left: calc(161.5px - 22px); top: calc(166px - 22px); width: 44px; height: 44px;
+  display: none; pointer-events: none; cursor: pointer;
+  filter: drop-shadow(0 0 8px rgba(255,255,255,.25));
+  transition: transform .2s ease, filter .2s ease;
+}
+.win-add::before, .win-add::after {
+  content: ""; position: absolute; left: 50%; top: 50%; background: #e5e5ea; border-radius: 3px;
+}
+.win-add::before { width: 34px; height: 5px; margin: -2.5px 0 0 -17px; }
+.win-add::after  { width: 5px; height: 34px; margin: -17px 0 0 -2.5px; }
+.station.can-add .win-add { display: block; }
+.station.open.can-add .win-add { pointer-events: auto; }
+.station.open .win-add:hover { transform: scale(1.1); filter: drop-shadow(0 0 12px rgba(255,255,255,.45)); }
 .win-closed { clip-path: inset(0 0 0 0); }
 .win-open { clip-path: inset(100% 0 0 0); }
 .station.open .win-closed { clip-path: inset(0 0 100% 0); }

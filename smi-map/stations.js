@@ -125,9 +125,9 @@ function build() {
     // A "+" sits on empty windows (until you've boarded), and on yours until you've added your character.
     const addable = (!row && !boarded) || (isMe && !row.coverUrl);
     seat.el.classList.toggle('addable', addable);
-    const folderIcon = seat.el.querySelector('.win-folder img');
-    const icon = `assets/stations/${row?.hasWork ? 'folder' : 'folder-empty'}.png`;
-    if (folderIcon.getAttribute('src') !== icon) folderIcon.setAttribute('src', icon);
+    // Open window: the folder shows once there's work; until then your own window offers a "+" to add some
+    seat.el.classList.toggle('has-work', !!row?.hasWork);
+    seat.el.classList.toggle('can-add', isMe && !!row.coverUrl && !row.hasWork);
     const cover = seat.el.querySelector('.cover');
     if (row?.coverUrl) cover.src = row.coverUrl; else cover.removeAttribute('src');
     seat.el.setAttribute('aria-label', !row ? 'Empty window: add your character here'
@@ -431,8 +431,13 @@ world.addEventListener('click', (e) => {
     return;
   }
   if (seat.row.id !== uid && !seat.row.is_open) return say(`${seat.row.name.split(' ')[0]}'s window is friends only.`);
-  // In an open window, the folder opens that person's work (Enter/Space on the window does the same).
-  if (seat.el.classList.contains('open') && (e.target.closest('.win-folder') || e.detail === 0)) return openFolder(seat);
+  // In an open window, the "+" adds your first work and the folder opens that person's work
+  // (Enter/Space on the window does whichever is showing).
+  if (seat.el.classList.contains('open')) {
+    const keyboard = e.detail === 0;
+    if (seat.el.classList.contains('can-add') && (e.target.closest('.win-add') || keyboard)) return addFirstWork(seat);
+    if (seat.el.classList.contains('has-work') && (e.target.closest('.win-folder') || keyboard)) return openFolder(seat);
+  }
   // Tap slides the window open; tap again slides it shut. Only one window is open at a time.
   const opening = !seat.el.classList.contains('open');
   seats.forEach(s => s.el.classList.remove('open'));
@@ -752,7 +757,18 @@ document.getElementById('workInput').addEventListener('change', async (e) => {
   showWorkInFolder();
 });
 
-// Your window's folder shows the document once you've uploaded something, and empties if you remove it all.
+// The "+" in your open window: pick work to upload; once it's in, the folder appears.
+function addFirstWork(seat) {
+  if (PREVIEW) { // nothing is saved in preview; just show what happens next
+    seat.row.hasWork = true;
+    build();
+    return say('Preview: your work isn’t saved, but this is where your folder appears.');
+  }
+  openSeat = seat; // the upload below refreshes this window's work
+  document.getElementById('workInput').click();
+}
+
+// Your window's folder appears once you've uploaded something, and goes back to "+" if you remove it all.
 function showWorkInFolder() {
   if (!me()) return;
   me().hasWork = works.length > 0;

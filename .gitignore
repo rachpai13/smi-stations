@@ -4,3 +4,5 @@ node_modules/
 capgen/*.png
 .DS_Store
 Thumbs.db
+motion-export/
+_probe/

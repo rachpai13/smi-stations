@@ -58,6 +58,15 @@ body {
 /* Both windows share the slot. Opening wipes the closed one away from the bottom up while the open one
    is revealed in exactly the strip below; the two areas never overlap, so it is always one window. */
 .win { position: absolute; inset: 0; pointer-events: none; transition: clip-path .6s cubic-bezier(.6, 0, .2, 1); }
+/* Folder in the middle of the open window's (clear) glass: x 97–226, y 79–253 of the 322px slot */
+.win-folder {
+  position: absolute; left: 118.5px; top: 115px; width: 86px; height: 91px;
+  pointer-events: none; cursor: pointer;
+  transition: transform .2s ease, filter .2s ease;
+}
+.win-folder img { display: block; width: 100%; height: 100%; user-select: none; }
+.station.open .win-folder { pointer-events: auto; }
+.station.open .win-folder:hover { transform: scale(1.06); filter: brightness(1.12); }
 .win-closed { clip-path: inset(0 0 0 0); }
 .win-open { clip-path: inset(100% 0 0 0); }
 .station.open .win-closed { clip-path: inset(0 0 100% 0); }

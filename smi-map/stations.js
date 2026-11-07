@@ -424,6 +424,8 @@ world.addEventListener('click', (e) => {
     return;
   }
   if (seat.row.id !== uid && !seat.row.is_open) return say(`${seat.row.name.split(' ')[0]}'s window is friends only.`);
+  // In an open window, the folder opens that person's work (Enter/Space on the window does the same).
+  if (seat.el.classList.contains('open') && (e.target.closest('.win-folder') || e.detail === 0)) return openFolder(seat);
   // Tap slides the window open; tap again slides it shut. Only one window is open at a time.
   const opening = !seat.el.classList.contains('open');
   seats.forEach(s => s.el.classList.remove('open'));
@@ -610,8 +612,7 @@ function renderFolder({ loading = false } = {}) {
 document.getElementById('closeFolder').addEventListener('click', () => folder.close());
 folder.addEventListener('click', (e) => { if (e.target === folder) folder.close(); });
 folder.addEventListener('close', () => {
-  // Slide the window shut again when you leave the folder.
-  seats.forEach(s => s.el.classList.remove('open'));
+  // The window stays open behind the folder; tap it to slide it shut.
   openSeat = null;
 });
 
